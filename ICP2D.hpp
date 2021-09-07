@@ -25,9 +25,77 @@
 #endif
 
 
+#include <ostream>
+#include <Eigen/Geometry>
+
 namespace ICP2D
 {
+    using Scaling = Eigen::UniformScaling<double>;
+    using Rotation = Eigen::Rotation2Dd;
+    using Translation = Eigen::Translation2d;
+    using Transform = Eigen::Affine2d;
 
+    struct Sim2D
+    {
+        double s;
+        double r;
+        double x;
+        double y;
+
+        Scaling scaling() const noexcept
+        {
+            return Scaling(s);
+        }
+
+        Rotation rotation() const noexcept
+        {
+            return Rotation(r);
+        }
+
+        Translation translation() const noexcept
+        {
+            return Translation(x, y);
+        }
+
+        Transform transform() const noexcept
+        {
+            return translation() * rotation() * scaling();
+        }
+
+        static Sim2D Identity()
+        {
+            Sim2D T;
+            T.s = 1;
+            T.r = 0;
+            T.x = 0;
+            T.y = 0;
+            return T;
+        }
+
+        Sim2D operator*(const Sim2D& other) const noexcept
+        {
+            Eigen::Vector2d t = transform() * other.translation().vector();
+            Sim2D T;
+            T.s = s * other.s;
+            T.r = r + other.r;
+            T.x = t.x();
+            T.y = t.y();
+            return T;
+        }
+    };
+
+    template<class CharT, class Traits>
+    std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const Sim2D& T)
+    {
+        return os
+            << '{'
+            << 's' << ':' << T.s << ',' << ' '
+            << 'r' << ':' << T.r << ',' << ' '
+            << 'x' << ':' << T.x << ',' << ' '
+            << 'y' << ':' << T.y
+            << '}'
+            ;
+    }
 }
 
 
