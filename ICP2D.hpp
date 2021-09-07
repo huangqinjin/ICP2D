@@ -25,6 +25,7 @@
 #endif
 
 
+#include <vector>
 #include <ostream>
 #include <Eigen/Geometry>
 
@@ -34,6 +35,10 @@ namespace ICP2D
     using Rotation = Eigen::Rotation2Dd;
     using Translation = Eigen::Translation2d;
     using Transform = Eigen::Affine2d;
+
+    using Point = Eigen::Vector2d;
+    using PointSet = std::vector<Point, Eigen::aligned_allocator<Point>>;
+    using WeightVector = Eigen::VectorXd;
 
     struct Sim2D
     {
@@ -96,6 +101,9 @@ namespace ICP2D
             << '}'
             ;
     }
+
+    ICP2D_API Sim2D solve(const PointSet& src, const PointSet& dst, const WeightVector& w);
+    ICP2D_API double error(const Sim2D& T, const PointSet& src, const PointSet& dst, const WeightVector& w);
 }
 
 
