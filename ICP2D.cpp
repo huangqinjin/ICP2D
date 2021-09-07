@@ -68,3 +68,85 @@ double ICP2D::error(const Sim2D& T, const PointSet& src, const PointSet& dst, co
 
     return e;
 }
+
+static void header(FILE* out, const BoundingBox& view, double size)
+{
+    Eigen::Vector2i
+            origin = (view.min)().array().floor().cast<int>(),
+            fov = (view.diagonal() + Point::Ones()).array().ceil().cast<int>();
+
+    size = size / fov.maxCoeff();
+    long w = std::lround(size * fov.x());
+    long h = std::lround(size * fov.y());
+
+    std::fprintf(out, R"SVG(<svg width="%+012ld" height="%+012ld" viewBox="%+012d %+012d %+012d %+012d" xmlns="http://www.w3.org/2000/svg">)SVG",
+                 w, h, origin.x(), origin.y(), fov.x(), fov.y());
+    std::fputc('\n', out);
+    std::fprintf(out, R"SVG(<rect x="%+012d" y="%+012d" width="%+012d" height="%+012d"/>)SVG",
+                 origin.x(), origin.y(), fov.x(), fov.y());
+    std::fputc('\n', out);
+}
+
+SVG::SVG() noexcept : out(nullptr) {}
+SVG::~SVG() { if (out) std::fclose(out); }
+
+void SVG::open(const char* file, const Point& scale) noexcept
+{
+    T = Sim2D::Identity();
+    this->scale = scale;
+    view = BoundingBox(Point::Zero(), Point::Ones());
+    if (out) std::fclose(out);
+    out = std::fopen(file, "w");
+    header(out, view, 1);
+    view.setEmpty();
+
+    std::fprintf(out, R"SVG(<g transform="scale(%f %f)" text-anchor="middle" dominant-baseline="central">)SVG",
+                 scale.x(), scale.y());
+    std::fputc('\n', out);
+}
+
+void SVG::close() noexcept
+{
+    std::fputs(R"SVG(</g>)SVG", out);
+    std::fputc('\n', out);
+    std::fputs(R"SVG(</svg>)SVG", out);
+    std::fputc('\n', out);
+    std::rewind(out);
+
+    view.transform(
+        Eigen::Translation2d(scale.cwiseProduct(view.center())) *
+        Eigen::Scaling(scale * 1.2) *
+        Eigen::Translation2d(-view.center()));
+
+    header(out, view, 1000);
+    std::fclose(out);
+    out = nullptr;
+}
+
+void SVG::push(const Sim2D& transform) noexcept
+{
+    T = transform;
+    std::fprintf(out, R"SVG(<g transform="translate(%f %f) rotate(%f) scale(%f)">)SVG",
+                 T.x, T.y, T.r / 3.141592654 * 180.0, T.s);
+    std::fputc('\n', out);
+}
+
+void SVG::pop() noexcept
+{
+    std::fputs(R"SVG(</g>)SVG", out);
+    std::fputc('\n', out);
+    T = Sim2D::Identity();
+}
+
+void SVG::draw(const PointSet& points, double radius, const char* color) noexcept
+{
+    Transform transform = T.transform();
+
+    for (const Point& p : points)
+    {
+        std::fprintf(out, R"SVG(<circle cx="%f" cy="%f" r="%f" fill-opacity="0" stroke-width="%f" stroke="%s"/>)SVG",
+                     p.x(), p.y(), radius, radius * 0.1, color);
+        std::fputc('\n', out);
+        view.extend(transform * p);
+    }
+}

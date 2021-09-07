@@ -25,6 +25,7 @@
 #endif
 
 
+#include <cstdio>
 #include <vector>
 #include <ostream>
 #include <Eigen/Geometry>
@@ -39,6 +40,7 @@ namespace ICP2D
     using Point = Eigen::Vector2d;
     using PointSet = std::vector<Point, Eigen::aligned_allocator<Point>>;
     using WeightVector = Eigen::VectorXd;
+    using BoundingBox = Eigen::AlignedBox2d;
 
     struct Sim2D
     {
@@ -104,6 +106,23 @@ namespace ICP2D
 
     ICP2D_API Sim2D solve(const PointSet& src, const PointSet& dst, const WeightVector& w);
     ICP2D_API double error(const Sim2D& T, const PointSet& src, const PointSet& dst, const WeightVector& w);
+
+    class ICP2D_API SVG
+    {
+        FILE* out;
+        Sim2D T;
+        Point scale;
+        BoundingBox view;
+
+    public:
+        SVG() noexcept;
+        ~SVG();
+        void open(const char* file, const Point& scale = Point::Ones()) noexcept;
+        void close() noexcept;
+        void push(const Sim2D& transform) noexcept;
+        void pop() noexcept;
+        void draw(const PointSet& points, double radius, const char* color) noexcept;
+    };
 }
 
 
