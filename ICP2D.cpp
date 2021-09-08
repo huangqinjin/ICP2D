@@ -7,6 +7,10 @@
 //
 #include "ICP2D.hpp"
 #include <cassert>
+#include <new>
+#include <random>
+#include <numeric>
+#include <algorithm>
 
 using namespace ICP2D;
 
@@ -67,6 +71,86 @@ double ICP2D::error(const Sim2D& T, const PointSet& src, const PointSet& dst, co
     }
 
     return e;
+}
+
+std::size_t ICP2D::Sampler::population(std::size_t num, size_t max) noexcept
+{
+    ++max;
+    if (num > max) return 0;
+    if (num * 2 > max) num = max - num;
+    if (num == 0) return 1;
+
+    std::size_t result = max;
+    for (std::size_t i = 2; i <= num; ++i)
+    {
+        result *= (max - i + 1);
+        result /= i;
+    }
+    return result;
+}
+
+Sampler* ICP2D::Sampler::random(std::size_t num, std::size_t max) noexcept
+{
+    struct impl : Sampler
+    {
+        const std::size_t num;
+        const std::size_t max;
+        std::mt19937_64 eng;
+
+        impl(std::size_t num, std::size_t max) noexcept
+            : num(num), max(max), eng(0) {}
+        std::size_t size() const noexcept override { return num; }
+        std::size_t maximum() const noexcept override { return max; }
+
+        void sample(std::size_t* output) noexcept override
+        {
+            // C++17 std::sample
+            for (std::size_t i = 0, n = num, m = max + 1; n != 0; ++i)
+            {
+                if (std::uniform_int_distribution<std::size_t>(0, --m)(eng) < n)
+                {
+                    *output++ = i;
+                    --n;
+                }
+            }
+        }
+    };
+
+    return new (std::nothrow) impl(num, max);
+}
+
+Sampler* ICP2D::Sampler::ordered(std::size_t num, std::size_t max) noexcept
+{
+    struct impl : Sampler
+    {
+        const std::size_t num;
+        const std::size_t max;
+
+        impl(std::size_t num, std::size_t max) noexcept
+             : num(num), max(max) { init(); }
+        std::size_t size() const noexcept override { return num; }
+        std::size_t maximum() const noexcept override { return max; }
+        void init() noexcept { std::iota(data(), data() + num, std::size_t(0)); }
+        std::size_t* data() noexcept { return reinterpret_cast<std::size_t*>(this + 1); }
+
+        void sample(std::size_t* output) noexcept override
+        {
+            std::copy_n(data(), num, output);
+            for (std::size_t i = num; i != 0;)
+            {
+                --i;
+                if (data()[i] < max - (num - i - 1))
+                {
+                    std::iota(data() + i, data() + num, data()[i] + 1);
+                    return;
+                }
+            }
+            init();
+        }
+    };
+
+    void* p = ::operator new(sizeof(impl) + sizeof(std::size_t) * num, std::nothrow);
+    return p ? new (p) impl(num, max) : nullptr;
 }
 
 static void header(FILE* out, const BoundingBox& view, double size)

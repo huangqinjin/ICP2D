@@ -107,6 +107,17 @@ namespace ICP2D
     ICP2D_API Sim2D solve(const PointSet& src, const PointSet& dst, const WeightVector& w);
     ICP2D_API double error(const Sim2D& T, const PointSet& src, const PointSet& dst, const WeightVector& w);
 
+    struct ICP2D_API Sampler
+    {
+        virtual ~Sampler() = default;
+        virtual std::size_t size() const noexcept = 0; // size() <= maximum() + 1
+        virtual std::size_t maximum() const noexcept = 0;
+        virtual void sample(std::size_t* output) noexcept = 0;
+        static std::size_t population(std::size_t num, size_t (max)) noexcept;
+        static Sampler* random(std::size_t num, std::size_t (max)) noexcept;
+        static Sampler* ordered(std::size_t num, std::size_t (max)) noexcept;
+    };
+
     class ICP2D_API SVG
     {
         FILE* out;
