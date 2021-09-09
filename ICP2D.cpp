@@ -8,6 +8,7 @@
 #include "ICP2D.hpp"
 #include <cassert>
 #include <new>
+#include <memory>
 #include <random>
 #include <numeric>
 #include <algorithm>
@@ -151,6 +152,83 @@ Sampler* ICP2D::Sampler::ordered(std::size_t num, std::size_t max) noexcept
 
     void* p = ::operator new(sizeof(impl) + sizeof(std::size_t) * num, std::nothrow);
     return p ? new (p) impl(num, max) : nullptr;
+}
+
+void RANSAC::solve() noexcept
+{
+    const std::size_t n = src.size();
+    assert(n == src.size());
+    assert(n == dst.size());
+    assert(n == w.size());
+
+    model = Sim2D::Identity();
+    score = 0;
+
+    if (num_max_iterations == 0 ||
+        inlier_distance_threshold <= 0 ||
+        n == 0)
+    {
+        return;
+    }
+    if (n == 1)
+    {
+        model = ::solve(src, dst, w);
+        score = 1;
+        return;
+    }
+
+    std::vector<std::size_t> indices(2);
+    const std::size_t population = Sampler::population(indices.size(), n - 1);
+    const std::size_t num_iterations = std::min(population, num_max_iterations);
+    std::unique_ptr<Sampler> sampler(
+        (population <= num_max_iterations ? &Sampler::ordered : &Sampler::random)(indices.size(), n - 1)
+    );
+
+    PointSet selected_src(indices.size());
+    PointSet selected_dst(indices.size());
+    WeightVector selected_w(indices.size());
+
+    const double threshold = inlier_distance_threshold * inlier_distance_threshold;
+
+    for (std::size_t i = 0; i < num_iterations; ++i)
+    {
+        // sampling data
+        sampler->sample(indices.data());
+        for (std::size_t j = 0; j < indices.size(); ++j)
+        {
+            selected_src[j] = src[indices[j]];
+            selected_dst[j] = dst[indices[j]];
+            selected_w[j] = w[indices[j]];
+        }
+
+        // init model
+        Sim2D T = ::solve(selected_src, selected_dst, selected_w);
+
+        // filter inliners
+        WeightVector w2 = w;
+        std::size_t num = 0;
+        Transform transform = T.transform();
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            if ((transform * src[i] - dst[i]).squaredNorm() * w2[i] >= threshold)
+                w2[i] = 0;
+            else
+                ++num;
+        }
+        if (num < num_min_inliers)
+            continue;
+
+        // refine model
+        T = ::solve(src, dst, w2);
+
+        // evaluate
+        double s = 1 - ::error(T, src, dst, w2) / (0.5 * num * threshold);
+        if (s >= score)
+        {
+            score = s;
+            model = T;
+        }
+    }
 }
 
 static void header(FILE* out, const BoundingBox& view, double size)

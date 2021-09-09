@@ -118,6 +118,22 @@ namespace ICP2D
         static Sampler* ordered(std::size_t num, std::size_t (max)) noexcept;
     };
 
+    struct ICP2D_API RANSAC
+    {
+        Sim2D model;
+        double score; // [0, 1]
+
+        PointSet src;
+        PointSet dst;
+        WeightVector w;
+
+        double inlier_distance_threshold;
+        std::size_t num_min_inliers;
+        std::size_t num_max_iterations;
+
+        void solve() noexcept;
+    };
+
     class ICP2D_API SVG
     {
         FILE* out;
