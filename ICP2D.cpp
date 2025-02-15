@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020-2021 Huang Qinjin (huangqinjin@gmail.com)
+// Copyright (c) 2020-2025 Huang Qinjin (huangqinjin@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -204,7 +204,7 @@ void RANSAC::solve() noexcept
         // init model
         Sim2D T = ::solve(selected_src, selected_dst, selected_w);
 
-        // filter inliners
+        // filter inliers
         WeightVector w2 = w;
         std::size_t num = 0;
         Transform transform = T.transform();

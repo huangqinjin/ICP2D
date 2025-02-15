@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020-2021 Huang Qinjin (huangqinjin@gmail.com)
+// Copyright (c) 2020-2025 Huang Qinjin (huangqinjin@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -96,10 +96,10 @@ namespace ICP2D
     {
         return os
             << '{'
-            << 's' << ':' << T.s << ',' << ' '
-            << 'r' << ':' << T.r << ',' << ' '
-            << 'x' << ':' << T.x << ',' << ' '
-            << 'y' << ':' << T.y
+            << 's' << ':' << ' ' << T.s << ',' << ' '
+            << 'r' << ':' << ' ' << T.r << ',' << ' '
+            << 'x' << ':' << ' ' << T.x << ',' << ' '
+            << 'y' << ':' << ' ' << T.y
             << '}'
             ;
     }
@@ -113,9 +113,9 @@ namespace ICP2D
         virtual std::size_t size() const noexcept = 0; // size() <= maximum() + 1
         virtual std::size_t maximum() const noexcept = 0;
         virtual void sample(std::size_t* output) noexcept = 0;
-        static std::size_t population(std::size_t num, size_t (max)) noexcept;
-        static Sampler* random(std::size_t num, std::size_t (max)) noexcept;
-        static Sampler* ordered(std::size_t num, std::size_t (max)) noexcept;
+        static std::size_t population(std::size_t num, size_t max) noexcept;
+        static Sampler* random(std::size_t num, std::size_t max) noexcept;
+        static Sampler* ordered(std::size_t num, std::size_t max) noexcept;
     };
 
     struct ICP2D_API RANSAC
